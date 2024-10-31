@@ -73,15 +73,9 @@ public class Player {
     }
 
     public void addCard(Card card){
-        hand.add(card);
+        this.hand.add(card);
     }
 
-    public void showHand(){
-        int totalValue = getValueHand();
-        hand.forEach(c -> log.info("Card: "+c.getRank()+" of "+c.getSuit()));
-        log.info("Total cards value: "+totalValue);
-
-    }
 
     public int getValueHand() {
         int totalValue = 0;
@@ -100,8 +94,8 @@ public class Player {
         return totalValue;
     }
 
-    public void increaseScore(){
-        this.score++;
+    public void resetHand() {
+        this.hand.clear();
     }
 
 

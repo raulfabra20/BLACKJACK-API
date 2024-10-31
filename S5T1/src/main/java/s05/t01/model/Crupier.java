@@ -53,5 +53,9 @@ public class Crupier {
 
         return totalValue;
     }
+
+    public void resetHand() {
+        this.hand.clear();
+    }
 }
 

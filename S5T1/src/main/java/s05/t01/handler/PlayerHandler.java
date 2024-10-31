@@ -1,5 +1,6 @@
 package s05.t01.handler;
 
+import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.server.ServerRequest;
 import org.springframework.web.reactive.function.server.ServerResponse;
 import reactor.core.publisher.Mono;
@@ -7,6 +8,7 @@ import s05.t01.service.PlayerService;
 
 import java.util.Map;
 
+@Component
 public class PlayerHandler {
     private PlayerService playerService;
 

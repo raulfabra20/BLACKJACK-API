@@ -22,7 +22,6 @@ public class BlackjackRouter {
                 .GET("/ranking", playerHandler::getRanking)
                 .PUT("/player/{playerId}", playerHandler::modifyPlayer)
                 .build();
-
     }
 
 }

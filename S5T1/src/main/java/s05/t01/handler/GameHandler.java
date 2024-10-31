@@ -19,8 +19,9 @@ public class GameHandler {
     private GameService gameService;
     private static Logger log = LoggerFactory.getLogger(Game.class);
 
-    public GameHandler(GameService gameService) {
+    public GameHandler(GameService gameService,PlayerService playerService) {
         this.gameService = gameService;
+        this.playerService = playerService;
     }
 
     public Mono<ServerResponse> createGame(ServerRequest request) {

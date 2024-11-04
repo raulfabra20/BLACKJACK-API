@@ -4,8 +4,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
-import reactor.core.publisher.Mono;
 import s05.t01.exception.NoCardsAvailableException;
+
+import java.util.ArrayList;
+import java.util.List;
 
 
 @Document (collection = "game")
@@ -13,8 +15,10 @@ public class Game {
     @Id
     private String id;
     private Player player;
+    private List<Card> playerHand;
     private Crupier crupier;
     private DeckCards deck;
+
     private boolean isFinished;
     private String status;
     private static Logger log = LoggerFactory.getLogger(Game.class);
@@ -23,8 +27,9 @@ public class Game {
 
     }
 
-    public Game(String username) {
-        this.player = new Player(username);
+    public Game(Player player) {
+        this.player = player;
+        this.playerHand = new ArrayList();
         this.crupier = new Crupier();
         this.deck = new DeckCards();
         this.isFinished = false;
@@ -75,6 +80,14 @@ public class Game {
         isFinished = finished;
     }
 
+    public List<Card> getPlayerHand() {
+        return playerHand;
+    }
+
+    public void setPlayerHand(List<Card> playerHand) {
+        this.playerHand = playerHand;
+    }
+
     public void handDeckPlayers() throws NoCardsAvailableException {
         deck.shuffleDeck();
         dealHandPlayer(2);
@@ -89,7 +102,7 @@ public class Game {
     public void dealHandPlayer(int numberOfCards){
         for(int i = 0; i < numberOfCards; i++){
             Card dealtCard = deck.dealCard();
-            player.addCard(dealtCard);
+            addCard(dealtCard);
         }
     }
 
@@ -101,8 +114,33 @@ public class Game {
     }
 
     public void resetHands() {
-        this.player.resetHand();
+        resetHand();
         this.crupier.resetHand();
+    }
+
+    public void addCard(Card card){
+        this.playerHand.add(card);
+    }
+
+    public int getValueHand() {
+        int totalValue = 0;
+        int aceCount = 0;
+
+        for (Card card : playerHand) {
+            totalValue += card.getRank().getValue();
+            if (card.getRank() == Rank.ACE) {
+                aceCount++;
+            }
+        }
+        while (totalValue > 21 && aceCount > 0) {
+            totalValue -= 10;
+            aceCount--;
+        }
+        return totalValue;
+    }
+
+    public void resetHand() {
+        this.playerHand.clear();
     }
 }
 

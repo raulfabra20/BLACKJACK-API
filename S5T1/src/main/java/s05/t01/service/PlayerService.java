@@ -36,20 +36,35 @@ public class PlayerService {
         return playerRepository.save(player);
     }
 
-    public Flux<Player> createRanking(){
+    public Flux<Player> createRanking() {
         return playerRepository.findAll().sort(Comparator.comparingInt(Player::getScore).reversed());
     }
 
-    public Mono<Player> changeNamePlayer(int playerId, String username){
+    public Mono<Player> changeNamePlayer(int playerId, String username) {
         return playerRepository.findById(playerId)
                 .flatMap(player -> {
                     player.setUsername(username);
                     return playerRepository.save(player);
                 })
-                .switchIfEmpty(Mono.error(new NoSuchElementException("Player with id: "+playerId+" not found.")))
+                .switchIfEmpty(Mono.error(new NoSuchElementException("Player with id: " + playerId + " not found.")))
                 .onErrorResume(e -> {
                     log.error("Error updating player: {}", e.getMessage());
-                    return Mono.error(new NotUpdatedPlayerException("Player with id: "+playerId+" not updated."));
+                    return Mono.error(new NotUpdatedPlayerException("Player with id: " + playerId + " not updated."));
+                });
+    }
+
+    public Mono<Player> incrementScore(int playerId, int increment) {
+        log.info("Fetching player with ID: {}", playerId);
+        return playerRepository.findById(playerId)
+                .switchIfEmpty(Mono.defer(() -> {
+                    log.error("Player not found with ID: {}", playerId);
+                    return Mono.error(new IllegalArgumentException("Player not found with ID: " + playerId));
+                }))
+                .flatMap(player -> {
+                    int updatedScore = player.getScore() + increment;
+                    player.setScore(updatedScore);
+                    log.info("Updating Player ID: {}, New Score: {}", playerId, updatedScore);
+                    return playerRepository.save(player);
                 });
     }
 }

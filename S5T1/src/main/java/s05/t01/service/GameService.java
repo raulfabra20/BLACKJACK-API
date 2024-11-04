@@ -24,7 +24,8 @@ public class GameService {
     public Mono<Game> initializeGame(Player player) {
         return playerService.initializePlayer(player)
                 .flatMap(existingPlayer -> {
-                    Game game = new Game(player.getUsername());
+                    Game game = new Game(existingPlayer);
+                    log.info("Initializing game for Player ID: {}, Username: {}", existingPlayer.getPlayerId(), existingPlayer.getUsername());
                     return gameRepository.save(game).doOnNext(savedGame -> {
                         log.info("New game created with ID : {}", savedGame.getId());
                     });
@@ -41,19 +42,24 @@ public class GameService {
                 return Mono.error(new IllegalStateException("The game has already ended."));
             }
             return processMove(move, game)
-                    .flatMap(updatedGame -> gameRepository.save(updatedGame));
+                    .doOnNext(updatedGame -> log.info("Updated Game ID: {}, Player's Hand: {}, Crupier's Hand: {}",
+                            updatedGame.getId(), updatedGame.getPlayerHand(), updatedGame.getCrupier().getHand()))
+                    .flatMap(gameRepository::save);
         });
     }
 
     public Mono<Game> startGame(String gameId) {
         return gameRepository.findById(gameId)
                 .flatMap(game -> {
-                    if (game.getPlayer().getHand().isEmpty() && game.getCrupier().getHand().isEmpty()) {
+                    if (game.getPlayerHand().isEmpty() && game.getCrupier().getHand().isEmpty()) {
                         game.handDeckPlayers();
+
                     } else{
                         game.resetHands();
+                        game.handDeckPlayers();
                         game.setStatus("in progress");
                     }
+                    log.info("Hand player: "+game.getPlayerHand()+"\n Crupier hand: "+game.getCrupier().getHand());
                    return checkImmediateWinner(game)
                             .flatMap(result -> {
                                 if (!"continue".equals(result)) {
@@ -66,14 +72,14 @@ public class GameService {
     }
 
     public Mono<String> checkImmediateWinner(Game game) {
-        int valuePlayer = game.getPlayer().getValueHand();
+        int valuePlayer = game.getValueHand();
         int valueCrupier = game.getCrupier().getValueHandCrupier();
 
         if (valuePlayer == 21) {
-            game.setStatus("Player: " + valuePlayer + "\n Crupier: " + valueCrupier + "\n Yass! You win!");
+            game.setStatus("Player:" + valuePlayer + " Crupier:" + valueCrupier + "  Yass! You win!");
             return Mono.just("winner");
         } else if (valueCrupier == 21) {
-            game.setStatus("Player: " + valuePlayer + "\n Crupier: " + valueCrupier + "\n Oops! You lose!");
+            game.setStatus("Player:" + valuePlayer + " Crupier:" + valueCrupier + "  Oops! You lose!");
             return Mono.just("loser");
         }
         return Mono.just("continue");
@@ -89,12 +95,13 @@ public class GameService {
                 }
                 return Mono.just(game)
                         .flatMap(g -> {
-                            g.getPlayer().addCard(g.dealCard());
-                            if(g.getPlayer().getValueHand()>21){
+                            g.addCard(g.dealCard());
+                            log.info("Card dealt to player, current hand: {}", g.getPlayerHand());
+                            if (g.getValueHand() > 21) {
                                 return endGame(g, "loser").flatMap(gameRepository::save);
                             }
                             return gameRepository.save(g);
-                });
+                        });
             case "stand":
                 if (game.isFinished()) {
                     return Mono.error(new IllegalStateException("Game is already finished."));
@@ -109,18 +116,18 @@ public class GameService {
     }
 
     public Mono<Game> endGame(Game game, String result) {
-        int valuePlayer = game.getPlayer().getValueHand();
+        int valuePlayer = game.getValueHand();
         int valueCrupier = game.getCrupier().getValueHandCrupier();
         switch (result) {
             case "winner":
-                game.getPlayer().setScore(game.getPlayer().getScore()+5);
-                game.setStatus("Player: " + valuePlayer + "\n Crupier:  " + valueCrupier + "\n Yass! You win!");
-                return Mono.just(game);
+                game.setStatus("Player:" + valuePlayer + " Crupier:" + valueCrupier + "  Yass! You win!");
+                return playerService.incrementScore(game.getPlayer().getPlayerId(), 5)
+                        .then(Mono.just(game));
             case "loser":
-                game.setStatus("Player: " + valuePlayer + "\n Crupier:  " + valueCrupier + "\n Oops! You lose!");
+                game.setStatus("Player:" + valuePlayer + " Crupier:" + valueCrupier + "  Oops! You lose!");
                 return Mono.just(game);
             case "tie":
-                game.setStatus("Player: " + valuePlayer + "\n Crupier:  " + valueCrupier + "\n OhWow! It's a tie!");
+                game.setStatus("Player:" + valuePlayer + " Crupier:" + valueCrupier + "   OhWow! It's a tie!");
                 return Mono.just(game);
             case "finish":
                 game.setStatus("Game finished.");
@@ -132,7 +139,7 @@ public class GameService {
     }
 
     public Mono<String> determineWinner(Game game) {
-        int valuePlayer = game.getPlayer().getValueHand();
+        int valuePlayer = game.getValueHand();
         int valueCrupier = game.getCrupier().getValueHandCrupier();
         while (valueCrupier < 17) {
             game.dealCardCroupier(1);

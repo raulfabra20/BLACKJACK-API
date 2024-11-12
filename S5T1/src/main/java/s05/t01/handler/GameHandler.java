@@ -1,5 +1,9 @@
 package s05.t01.handler;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -24,6 +28,13 @@ public class GameHandler {
         this.playerService = playerService;
     }
 
+    @Operation(
+            summary = "Create a new game for a player",
+            requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                    description = "Player object containing the username",
+                    required = true,
+                    content = @Content(
+                            schema = @Schema(implementation = Player.class, example = "{\"username\": \"player1\"}"))))
     public Mono<ServerResponse> createGame(ServerRequest request) {
         return request.bodyToMono(Player.class)
                 .flatMap(player -> {
@@ -46,6 +57,12 @@ public class GameHandler {
                 .onErrorResume(e -> ServerResponse.status(500).bodyValue("Error: " + e.getMessage()));
     }
 
+
+    @Operation(
+            summary = "Get details of the current game"
+           ,parameters = {
+                    @Parameter(name = "id", description = "ID of the game", required = true),
+            })
     public Mono<ServerResponse> getGameDetails(ServerRequest request) {
         String gameId = request.pathVariable("id");
         return gameService.getGameById(gameId).flatMap(game -> ServerResponse.ok().bodyValue(game))
@@ -54,9 +71,18 @@ public class GameHandler {
                     log.error("Error fetching game details for ID: " + gameId, e);
                     return ServerResponse.status(500).bodyValue("Internal Server Error: " + e.getMessage());
                 });
-
     }
 
+
+    @Operation(
+            summary = "The player chooses which move to make",
+            description = "Allows the player to choose a move in the game with the specified ID",
+            parameters = {
+                    @Parameter(name = "id", description = "ID of the game", required = true)
+            })
+             @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                    description = "Move to be made in the game, provided in the body as JSON", required = true,
+                    content = @Content(schema = @Schema(example = "{\"move\": \"hit\"}")))
     public Mono<ServerResponse> makeMove(ServerRequest request) {
         String gameId = request.pathVariable("id");
         return gameService.getGameById(gameId)
@@ -71,12 +97,23 @@ public class GameHandler {
                 .onErrorResume(e -> ServerResponse.status(500).bodyValue("Internal Server Error " + e.getMessage()));
     }
 
+
+    @Operation(
+            summary = "Delete a game",
+            parameters = {
+                    @Parameter(name = "id", description = "ID of the game", required = true)
+    })
     public Mono<ServerResponse> deleteGame(ServerRequest request) {
         String gameId = request.pathVariable("id");
         return gameService.removeGame(gameId)
                 .flatMap(removedGame  ->
                         ServerResponse.ok().bodyValue("Game with id "+gameId+" deleted successfully."))
                 .onErrorResume(e -> ServerResponse.status(500).bodyValue("Game with id "+gameId+" not found."));
+    }
+
+    @Operation(summary = "Root endpoint")
+    public Mono<ServerResponse> handleRootRequest(ServerRequest request) {
+        return ServerResponse.ok().bodyValue("Welcome to my Blackjack Api!");
     }
 }
 

@@ -111,7 +111,6 @@ public class BlackjackRouter {
                             }
                     )
             )
-
     })
     public RouterFunction<ServerResponse> routeBlackjack(GameHandler gameHandler, PlayerHandler playerHandler ){
         return route()
@@ -124,5 +123,4 @@ public class BlackjackRouter {
                 .GET("/", gameHandler::handleRootRequest)
                 .build();
     }
-
 }

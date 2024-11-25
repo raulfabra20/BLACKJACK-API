@@ -1,0 +1,22 @@
+version: '3.8'
+services:
+  db:
+    image: mysql:latest
+    environment:
+      MYSQL_ROOT_PASSWORD: raul
+      MYSQL_DATABASE: blackjack
+      MYSQL_USER: root
+      MYSQL_PASSWORD: raul
+    ports:
+      - "3307:3306"
+  app:
+    image: s5t1:latest
+    environment:
+      - spring.datasource.url=r2dbc:mysql://db:3306/blackjack
+      - spring.r2dbc.username=root
+      - spring.r2dbc.password=raul
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+     - "8080:8080"
